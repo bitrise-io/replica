@@ -1,0 +1,10 @@
++ vboxmanage --version
+5.1.6r110634
++ vagrant version
+Installed Version: 1.8.6
+Latest Version: 1.8.6
+ 
+You're running an up-to-date version of Vagrant!
++ packer version
+Packer v0.10.2
+
