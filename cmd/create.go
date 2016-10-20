@@ -59,11 +59,14 @@ func createVagrantBoxFromInstallMacOSApp(installMacOSAppPath string) error {
 }
 
 func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
-	supportDirPath := "./_support"
+	// supportDirPath := "./_support"
 
 	accountUsername := "vagrant"
 	// accountPassword := "vagrant"
 	outDir := "./packer"
+	if err := pathutil.EnsureDirExist(outDir); err != nil {
+		return fmt.Errorf("Failed to create output directory (path:%s), error: %s", outDir, err)
+	}
 
 	installESDPath := filepath.Join(installMacOSAppPath, "Contents/SharedSupport/InstallESD.dmg")
 	if isExist, err := pathutil.IsPathExists(installESDPath); err != nil {
@@ -77,13 +80,20 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 		return fmt.Errorf("Failed to create temporary ESD mount directory, error: %s", err)
 	}
 
+	defer func() {
+		log.Println(colorstring.Yellow("If you want to clean up the temporary files created by replica,"))
+		log.Println(colorstring.Yellow(" just delete the directory: "), tmpDir)
+	}()
+
 	fmt.Println()
 	log.Println(colorstring.Green(" => Attaching input OS X installer image with shadow file.."))
+	// MNT_ESD=$(/usr/bin/mktemp -d /tmp/veewee-osx-esd.XXXX)
 	tmpESDMountDir := filepath.Join(tmpDir, "mnt", "esd")
 	if err := pathutil.EnsureDirExist(tmpESDMountDir); err != nil {
 		return fmt.Errorf("Failed to create temporary ESD mount directory, error: %s", err)
 	}
 	{
+		// SHADOW_FILE=$(/usr/bin/mktemp /tmp/veewee-osx-shadow.XXXX)
 		tmpESDShadowFilePath := filepath.Join(tmpDir, "esd-shadow")
 		if isExist, err := pathutil.IsPathExists(tmpESDShadowFilePath); err != nil {
 			return fmt.Errorf("Failed to check whether the temporary ESD shadow file already exists, error: %s", err)
@@ -105,6 +115,7 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 
 		// cleanup
 		defer func() {
+			// hdiutil detach -quiet -force "$MNT_ESD"
 			cmd := cmdex.NewCommandWithStandardOuts("hdiutil", "detach", "-quiet", "-force", tmpESDMountDir)
 			fmt.Println()
 			log.Printf("$ %s", cmd.PrintableCommandArgs())
@@ -118,13 +129,15 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 	fmt.Println()
 	log.Println(colorstring.Green(" => Mounting BaseSystem.."))
 	macOSVersion := MacOSVersionModel{}
+	// BASE_SYSTEM_DMG="$MNT_ESD/BaseSystem.dmg"
+	baseSystemDMGPath := filepath.Join(tmpESDMountDir, "BaseSystem.dmg")
 	{
-		baseSystemDMGPath := filepath.Join(tmpESDMountDir, "BaseSystem.dmg")
 		if isExist, err := pathutil.IsPathExists(baseSystemDMGPath); err != nil {
 			return fmt.Errorf("Failed to check whether BaseSystem.dmg exists (path:%s), error: %s", baseSystemDMGPath, err)
 		} else if !isExist {
 			return fmt.Errorf("BaseSystem.dmg does not exist (path:%s)", baseSystemDMGPath)
 		}
+		// MNT_BASE_SYSTEM=$(/usr/bin/mktemp -d /tmp/veewee-osx-basesystem.XXXX)
 		tmpBaseSystemMountDirPath := filepath.Join(tmpDir, "mnt", "basesystem")
 		if err := pathutil.EnsureDirExist(tmpBaseSystemMountDirPath); err != nil {
 			return fmt.Errorf("Failed to create temporary 'Base System' mount directory, error: %s", err)
@@ -142,6 +155,7 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 
 		// cleanup
 		defer func() {
+			// hdiutil detach -quiet -force "$MNT_BASE_SYSTEM"
 			cmd := cmdex.NewCommandWithStandardOuts("hdiutil", "detach", "-quiet", "-force", tmpBaseSystemMountDirPath)
 			fmt.Println()
 			log.Printf("$ %s", cmd.PrintableCommandArgs())
@@ -162,23 +176,36 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 
 	outDMGPath := filepath.Join(outDir, fmt.Sprintf("OSX_InstallESD_%s_%s.dmg", macOSVersion.Version, macOSVersion.Build))
 	log.Printf("outDMGPath: %s", outDMGPath)
+	if isExist, err := pathutil.IsPathExists(outDMGPath); err != nil {
+		return fmt.Errorf("Failed to check whether the output DMG file already exists, error: %s", err)
+	} else if isExist {
+		return fmt.Errorf("Output DMG already exists (at path: %s) - covardly refusing to overwrite it", outDMGPath)
+	}
 
 	fmt.Println()
 	log.Println(colorstring.Green(" => Making firstboot installer pkg.."))
+	builtPkgPath := ""
 	{
-		if err := pathutil.EnsureDirExist(filepath.Join(supportDirPath, "pkgroot/private/var/db/dslocal/nodes/Default/users")); err != nil {
+		tmpInstallerPkgPath := filepath.Join(tmpDir, "pkginst")
+		if err := pathutil.EnsureDirExist(tmpInstallerPkgPath); err != nil {
+			return fmt.Errorf("Failed to create tmp installer pkg dir, error: %s", err)
+		}
+		log.Println(" ==> Created temporary installer pkg directory at path: ", tmpInstallerPkgPath)
+
+		pkgBuildPkgRootPath := filepath.Join(tmpInstallerPkgPath, "pkgroot")
+		if err := pathutil.EnsureDirExist(filepath.Join(pkgBuildPkgRootPath, "private/var/db/dslocal/nodes/Default/users")); err != nil {
 			return fmt.Errorf("Failed to create pkg users dir, error: %s", err)
 		}
-		if err := pathutil.EnsureDirExist(filepath.Join(supportDirPath, "pkgroot/private/var/db/shadow/hash")); err != nil {
+		if err := pathutil.EnsureDirExist(filepath.Join(pkgBuildPkgRootPath, "private/var/db/shadow/hash")); err != nil {
 			return fmt.Errorf("Failed to create pkg hash dir, error: %s", err)
 		}
 
-		// Originally this was generate with: $ openssl base64 -in path/to/image.jpg
-		userImagePath := filepath.Join(supportDirPath, "vagrant.jpg")
+		userImagePath := filepath.Join("./data", "vagrant.jpg")
 		imgContBytes, err := fileutil.ReadBytesFromFile(userImagePath)
 		if err != nil {
 			return fmt.Errorf("Failed to read user account image (path:%s), error: %s", userImagePath, err)
 		}
+		// Originally this was generate with: $ openssl base64 -in path/to/image.jpg
 		rawBase64UserImage := base64.StdEncoding.EncodeToString(imgContBytes)
 		// inject newline at every 64th char, to match the output of $ openssl base64 -in path/to/image.jpg
 		multilineBase64UserImage := ""
@@ -194,19 +221,490 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 		if err != nil {
 			return fmt.Errorf("Failed to render User.plist template, error: %s", err)
 		}
-		fmt.Println()
-		fmt.Println(userPlistContent)
-		fmt.Println()
+		// fmt.Println()
+		// fmt.Println(userPlistContent)
+		// fmt.Println()
 
-		userPlistPath := filepath.Join(supportDirPath,
-			"pkgroot/private/var/db/dslocal/nodes/Default/users", accountUsername+".plist")
+		userPlistPath := filepath.Join(pkgBuildPkgRootPath,
+			"private/var/db/dslocal/nodes/Default/users", accountUsername+".plist")
 		if err := fileutil.WriteStringToFile(userPlistPath, userPlistContent); err != nil {
 			return fmt.Errorf("Failed to write User.plist into file, error: %s", err)
 		}
 		log.Println("User.plist (" + accountUsername + ".plist) saved into file - [OK]")
+
+		// user shadow hash (password)
+		// generate one with _support/generate_shadowhash: _support/generate_shadowhash PASSWORD
+		// this one is for "vagrant"
+		accountPasswordShadowHash := `0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F178575D2EE82F9597BD8441A0513827E81F88DF33B39890000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
+		accountPasswordShadowHashFilePath := filepath.Join(pkgBuildPkgRootPath,
+			"private/var/db/shadow/hash", accountGeneratedUID)
+		if err := fileutil.WriteStringToFile(accountPasswordShadowHashFilePath, accountPasswordShadowHash); err != nil {
+			return fmt.Errorf("Failed to write account password shadow hash into file (%s), error: %s", accountPasswordShadowHashFilePath, err)
+		}
+
+		disableRemoteManagement := true
+		disableScreenSharing := true
+		disableSIP := false
+		postInstScriptCont, err := renderPostInstallScriptTemplate(accountUsername, disableRemoteManagement, disableScreenSharing, disableSIP)
+		if err != nil {
+			return fmt.Errorf("Failed to render post install script template, error: %s", err)
+		}
+
+		postInstallScriptDirPath := filepath.Join(tmpInstallerPkgPath, "tmp/Scripts")
+		if err := pathutil.EnsureDirExist(postInstallScriptDirPath); err != nil {
+			return fmt.Errorf("Failed to create post install Scripts directory (path:%s), error: %s", postInstallScriptDirPath, err)
+		}
+		postInstallScriptPath := filepath.Join(postInstallScriptDirPath, "postinstall")
+		if err := fileutil.WriteStringToFile(postInstallScriptPath, postInstScriptCont); err != nil {
+			return fmt.Errorf("Failed to write Post Install script into file, error: %s", err)
+		}
+		log.Println("Post Install script saved into file - [OK]")
+		// chmod a+x "$SUPPORT_DIR/tmp/Scripts/postinstall"
+		os.Chmod(postInstallScriptPath, 0755)
+		log.Println("Post Install script made executable - [OK]")
+
+		fmt.Println()
+		log.Println(colorstring.Green(" ==> Building it ..."))
+		// BUILT_COMPONENT_PKG="$SUPPORT_DIR/tmp/veewee-config-component.pkg"
+		builtComponentPkgPath := filepath.Join(tmpInstallerPkgPath, "config-component.pkg")
+		{
+			// pkgbuild --quiet \
+			// 	--root "$SUPPORT_DIR/pkgroot" \
+			// 	--scripts "$SUPPORT_DIR/tmp/Scripts" \
+			// 	--identifier com.vagrantup.veewee-config \
+			// 	--version 0.1 \
+			// 	"$BUILT_COMPONENT_PKG"
+			cmd := cmdex.NewCommandWithStandardOuts("pkgbuild",
+				"--quiet",
+				"--root", pkgBuildPkgRootPath,
+				"--scripts", postInstallScriptDirPath,
+				"--identifier", "com.vagrantup.config",
+				"--version", "0.1",
+				builtComponentPkgPath,
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to build package, error: %s", err)
+			}
+		}
+
+		fmt.Println()
+		log.Println(colorstring.Green(" ==> Packaging it ..."))
+		// BUILT_PKG="$SUPPORT_DIR/tmp/veewee-config.pkg"
+		builtPkgPath = filepath.Join(tmpInstallerPkgPath, "config.pkg")
+		{
+			// productbuild \
+			// 	--package "$BUILT_COMPONENT_PKG" \
+			// 	"$BUILT_PKG"
+			cmd := cmdex.NewCommandWithStandardOuts("productbuild",
+				"--package", builtComponentPkgPath,
+				builtPkgPath,
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to build package, error: %s", err)
+			}
+		}
 	}
 
+	fmt.Println()
+	baseSystemDMGRWPath := filepath.Join(tmpDir, "osx-basesystem-rw.dmg")
+	log.Println(colorstring.Green(" => Creating empty read-write DMG located at " + baseSystemDMGRWPath + ".."))
+	// MNT_BASE_SYSTEM="/Volumes/OS X Base System"
+	mountedBaseSystemPath := "/Volumes/OS X Base System"
+	{
+		{
+			cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
+				"create", "-o", baseSystemDMGRWPath,
+				"-size", "10g", "-layout", "SPUD", "-fs", "HFS+J",
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to run command, error: %s", err)
+			}
+		}
+
+		tmpBaseSystemDMGRWMountDirPath := filepath.Join(tmpDir, "mnt", "dmg-basesystem-dmg")
+		if err := pathutil.EnsureDirExist(tmpBaseSystemDMGRWMountDirPath); err != nil {
+			return fmt.Errorf("Failed to create temporary 'Base System' mount directory, error: %s", err)
+		}
+
+		// hdiutil attach "$BASE_SYSTEM_DMG_RW" -mountpoint "$MNT_BASE_SYSTEM" -nobrowse -owners on
+		{
+			cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
+				"attach", baseSystemDMGRWPath,
+				"-mountpoint", tmpBaseSystemDMGRWMountDirPath,
+				"-nobrowse", "-owners", "on",
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to run command, error: %s", err)
+			}
+		}
+		// cleanup
+		defer func() {
+			cmd := cmdex.NewCommandWithStandardOuts("hdiutil", "detach", "-quiet", "-force", tmpBaseSystemDMGRWMountDirPath)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				log.Printf(" [!] Failed to detach tmp ESD mount (path:%s), error: %s", tmpBaseSystemDMGRWMountDirPath, err)
+			}
+		}()
+
+		log.Println(" ==> Restoring ('asr restore') the BaseSystem to the read-write DMG..")
+		// This asr restore was needed as of 10.11 DP7 and up. See
+		// https://github.com/timsutton/osx-vm-templates/issues/40
+		//
+		// Note that when the restore completes, the volume is automatically re-mounted
+		// and not with the '-nobrowse' option. It's an annoyance we could possibly fix
+		// in the future..
+
+		// asr restore --source "$BASE_SYSTEM_DMG" --target "$MNT_BASE_SYSTEM" --noprompt --noverify --erase
+		{
+			cmd := cmdex.NewCommandWithStandardOuts("asr",
+				"restore", "--source", baseSystemDMGPath,
+				"--target", tmpBaseSystemDMGRWMountDirPath,
+				"--noprompt", "--noverify", "--erase",
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to run command, error: %s", err)
+			}
+		}
+
+		// rm -r "$MNT_BASE_SYSTEM"
+		{
+			cmd := cmdex.NewCommandWithStandardOuts("rm",
+				"-r", tmpBaseSystemDMGRWMountDirPath,
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to run command, error: %s", err)
+			}
+		}
+
+		{
+			// BASESYSTEM_OUTPUT_IMAGE="$OUTPUT_DMG"
+			// outDMGPath
+
+			// PACKAGES_DIR="$MNT_BASE_SYSTEM/System/Installation/Packages"
+			packagesDir := filepath.Join(mountedBaseSystemPath, "System/Installation/Packages")
+
+			// rm "$PACKAGES_DIR"
+			if err := os.Remove(packagesDir); err != nil {
+				return fmt.Errorf("Failed to remove mounted Packages dir (path:%s), error: %s", packagesDir, err)
+			}
+
+			// msg_status "Moving 'Packages' directory from the ESD to BaseSystem.."
+			log.Println(" ==> Moving 'Packages' directory from the ESD to BaseSystem..")
+
+			// sudo mv -v "$MNT_ESD/Packages" "$MNT_BASE_SYSTEM/System/Installation/"
+			{
+				cmd := cmdex.NewCommandWithStandardOuts("sudo",
+					"mv", "-v",
+					filepath.Join(tmpESDMountDir, "Packages"),
+					filepath.Join(mountedBaseSystemPath, "System/Installation")+"/",
+				)
+				fmt.Println()
+				log.Printf("$ %s", cmd.PrintableCommandArgs())
+				fmt.Println()
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("Failed to run command, error: %s", err)
+				}
+			}
+
+			// # This isn't strictly required for Mavericks, but Yosemite will consider the
+			// # installer corrupt if this isn't included, because it cannot verify BaseSystem's
+			// # consistency and perform a recovery partition verification
+			// msg_status "Copying in original BaseSystem dmg and chunklist.."
+			log.Println(" ==> Copying in original BaseSystem dmg and chunklist..")
+
+			// cp "$MNT_ESD/BaseSystem.dmg" "$MNT_BASE_SYSTEM/"
+			{
+				cmd := cmdex.NewCommandWithStandardOuts("cp",
+					filepath.Join(tmpESDMountDir, "BaseSystem.dmg"),
+					mountedBaseSystemPath+"/",
+				)
+				fmt.Println()
+				log.Printf("$ %s", cmd.PrintableCommandArgs())
+				fmt.Println()
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("Failed to run command, error: %s", err)
+				}
+			}
+			// cp "$MNT_ESD/BaseSystem.chunklist" "$MNT_BASE_SYSTEM/"
+			{
+				cmd := cmdex.NewCommandWithStandardOuts("cp",
+					filepath.Join(tmpESDMountDir, "BaseSystem.chunklist"),
+					mountedBaseSystemPath+"/",
+				)
+				fmt.Println()
+				log.Printf("$ %s", cmd.PrintableCommandArgs())
+				fmt.Println()
+				if err := cmd.Run(); err != nil {
+					return fmt.Errorf("Failed to run command, error: %s", err)
+				}
+			}
+
+			// msg_status "Adding automated components.."
+			fmt.Println()
+			log.Println(colorstring.Green(" => Adding automated components.."))
+			{
+				// CDROM_LOCAL="$MNT_BASE_SYSTEM/private/etc/rc.cdrom.local"
+				cdromDotLocalFilePath := filepath.Join(mountedBaseSystemPath, "private/etc/rc.cdrom.local")
+				// cat > $CDROM_LOCAL << EOF
+				// diskutil eraseDisk jhfs+ "Macintosh HD" GPTFormat disk0
+				// if [ "\$?" == "1" ]; then
+				//     diskutil eraseDisk jhfs+ "Macintosh HD" GPTFormat disk1
+				// fi
+				// EOF
+				cdromFileCont := `diskutil eraseDisk jhfs+ "Macintosh HD" GPTFormat disk0
+				if [ "\$?" == "1" ]; then
+				    diskutil eraseDisk jhfs+ "Macintosh HD" GPTFormat disk1
+				fi`
+				if err := fileutil.WriteStringToFile(cdromDotLocalFilePath, cdromFileCont); err != nil {
+					return fmt.Errorf("Failed to write rc.cdrom.local content into file, error: %s", err)
+				}
+				// chmod a+x "$CDROM_LOCAL"
+				os.Chmod(cdromDotLocalFilePath, 0755)
+
+				{
+					// mkdir "$PACKAGES_DIR/Extras"
+					packagesExtrasDirPath := filepath.Join(packagesDir, "Extras")
+					if err := pathutil.EnsureDirExist(packagesExtrasDirPath); err != nil {
+						return fmt.Errorf("Failed to create Packages/Extras, error: %s", err)
+					}
+
+					// cp "$SUPPORT_DIR/minstallconfig.xml" "$PACKAGES_DIR/Extras/"
+					minstallconfigXMLContent := `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>InstallType</key>
+	<string>automated</string>
+	<key>Language</key>
+	<string>en</string>
+	<key>Package</key>
+	<string>/System/Installation/Packages/OSInstall.collection</string>
+	<key>Target</key>
+	<string>/Volumes/Macintosh HD</string>
+	<key>TargetName</key>
+	<string>Macintosh HD</string>
+</dict>
+</plist>
+`
+					fpth := filepath.Join(packagesExtrasDirPath, "minstallconfig.xml")
+					if err := fileutil.WriteStringToFile(fpth, minstallconfigXMLContent); err != nil {
+						return fmt.Errorf("Failed to write 'minstallconfig.xml' into file, error: %s", err)
+					}
+				}
+				// cp "$SUPPORT_DIR/OSInstall.collection" "$PACKAGES_DIR/"
+				{
+					osInstallCollectioncont := `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+	<string>/System/Installation/Packages/OSInstall.mpkg</string>
+	<string>/System/Installation/Packages/OSInstall.mpkg</string>
+    <string>/System/Installation/Packages/config.pkg</string>
+</array>
+</plist>
+`
+					fpth := filepath.Join(packagesDir, "OSInstall.collection")
+					if err := fileutil.WriteStringToFile(fpth, osInstallCollectioncont); err != nil {
+						return fmt.Errorf("Failed to write 'OSInstall.collection' into file, error: %s", err)
+					}
+				}
+
+				// cp "$BUILT_PKG" "$PACKAGES_DIR/"
+				{
+					cmd := cmdex.NewCommandWithStandardOuts("cp",
+						builtPkgPath,
+						packagesDir+"/",
+					)
+					fmt.Println()
+					log.Printf("$ %s", cmd.PrintableCommandArgs())
+					fmt.Println()
+					if err := cmd.Run(); err != nil {
+						return fmt.Errorf("Failed to run command, error: %s", err)
+					}
+				}
+				// rm -rf "$SUPPORT_DIR/tmp"
+			}
+		}
+	}
+
+	// msg_status "Unmounting BaseSystem.."
+	log.Println(colorstring.Green(" => Unmounting BaseSystem.."))
+	// hdiutil detach "$MNT_BASE_SYSTEM"
+	{
+		cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
+			"detach", mountedBaseSystemPath,
+		)
+		fmt.Println()
+		log.Printf("$ %s", cmd.PrintableCommandArgs())
+		fmt.Println()
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("Failed to run command, error: %s", err)
+		}
+	}
+
+	// msg_status "On Mavericks and later, the entire modified BaseSystem is our output dmg."
+	// hdiutil convert -format UDZO -o "$OUTPUT_DMG" "$BASE_SYSTEM_DMG_RW"
+	//   -o "$OUTPUT_DMG" "$BASE_SYSTEM_DMG_RW"
+	{
+		cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
+			"convert", "-format", "UDZO",
+			"-o", outDMGPath,
+			baseSystemDMGRWPath,
+		)
+		fmt.Println()
+		log.Printf("$ %s", cmd.PrintableCommandArgs())
+		fmt.Println()
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("Failed to run command, error: %s", err)
+		}
+	}
+
+	// msg_status "Checksumming output image.."
+	// MD5=$(md5 -q "$OUTPUT_DMG")
+	// msg_status "MD5: $MD5"
+
+	// msg_status "Done. Built image is located at $OUTPUT_DMG. Add this iso and its checksum to your template."
+	log.Println(colorstring.Green("Done. Built image is located at " + outDMGPath + ". Add this iso and its checksum to your template."))
+
 	return nil
+}
+
+func renderPostInstallScriptTemplate(accountUsername string, disableRemoteManagement, disableScreenSharing, disableSIP bool) (string, error) {
+	type TemplateInventory struct {
+		AccountUsername         string
+		DisableRemoteManagement int
+		DisableScreenSharing    int
+		DisableSIP              int
+	}
+	inv := TemplateInventory{
+		AccountUsername:         accountUsername,
+		DisableRemoteManagement: 0,
+		DisableScreenSharing:    0,
+		DisableSIP:              0,
+	}
+	if disableRemoteManagement {
+		inv.DisableRemoteManagement = 1
+	}
+	if disableScreenSharing {
+		inv.DisableScreenSharing = 1
+	}
+	if disableSIP {
+		inv.DisableSIP = 1
+	}
+
+	result, err := templateutil.EvaluateTemplateStringToString(`#!/bin/sh
+USER="{{ .AccountUsername }}"
+OSX_VERS=$(sw_vers -productVersion | awk -F "." '{print $2}')
+PlistBuddy="/usr/libexec/PlistBuddy"
+
+target_ds_node="${3}/private/var/db/dslocal/nodes/Default"
+# Override the default behavior of sshd on the target volume to be not disabled
+if [ "$OSX_VERS" -ge 10 ]; then
+    OVERRIDES_PLIST="$3/private/var/db/com.apple.xpc.launchd/disabled.plist"
+    $PlistBuddy -c 'Delete :com.openssh.sshd' "$OVERRIDES_PLIST"
+    $PlistBuddy -c 'Add :com.openssh.sshd bool False' "$OVERRIDES_PLIST"
+    if [ {{ .DisableScreenSharing }} = 0 ]; then
+        $PlistBuddy -c 'Delete :com.apple.screensharing' "$OVERRIDES_PLIST"
+        $PlistBuddy -c 'Add :com.apple.screensharing bool False' "$OVERRIDES_PLIST"
+    fi
+else
+    OVERRIDES_PLIST="$3/private/var/db/launchd.db/com.apple.launchd/overrides.plist"
+    $PlistBuddy -c 'Delete :com.openssh.sshd' "$OVERRIDES_PLIST"
+    $PlistBuddy -c 'Add :com.openssh.sshd:Disabled bool False' "$OVERRIDES_PLIST"
+    if [ {{ .DisableScreenSharing }} = 0 ]; then
+        $PlistBuddy -c 'Delete :com.apple.screensharing' "$OVERRIDES_PLIST"
+        $PlistBuddy -c 'Add :com.apple.screensharing:Disabled bool False' "$OVERRIDES_PLIST"
+    fi
+fi
+
+# Add user to sudoers
+cp "$3/etc/sudoers" "$3/etc/sudoers.orig"
+echo "$USER ALL=(ALL) NOPASSWD: ALL" >> "$3/etc/sudoers"
+
+# Add user to admin group memberships (even though GID 80 is enough for most things)
+USER_GUID=$($PlistBuddy -c 'Print :generateduid:0' "$target_ds_node/users/$USER.plist")
+USER_UID=$($PlistBuddy -c 'Print :uid:0' "$target_ds_node/users/$USER.plist")
+$PlistBuddy -c 'Add :groupmembers: string '"$USER_GUID" "$target_ds_node/groups/admin.plist"
+
+# Add user to SSH SACL group membership
+ssh_group="${target_ds_node}/groups/com.apple.access_ssh.plist"
+$PlistBuddy -c 'Add :groupmembers array' "${ssh_group}"
+$PlistBuddy -c 'Add :groupmembers:0 string '"$USER_GUID"'' "${ssh_group}"
+$PlistBuddy -c 'Add :users array' "${ssh_group}"
+$PlistBuddy -c 'Add :users:0 string '$USER'' "${ssh_group}"
+
+# Enable Remote Desktop and configure user with full privileges
+if [ {{ .DisableRemoteManagement }} = 0 ]; then
+    echo "enabled" > "$3/private/etc/RemoteManagement.launchd"
+    $PlistBuddy -c 'Add :naprivs array' "$target_ds_node/users/$USER.plist"
+    $PlistBuddy -c 'Add :naprivs:0 string -1073741569' "$target_ds_node/users/$USER.plist"
+fi
+
+if [ {{ .DisableSIP }} = 1 ]; then
+    csrutil disable
+fi
+
+# Pre-create user folder so veewee will have somewhere to scp configinfo to
+mkdir -p "$3/Users/$USER/Library/Preferences"
+
+# Suppress annoying iCloud welcome on a GUI login
+$PlistBuddy -c 'Add :DidSeeCloudSetup bool true' "$3/Users/$USER/Library/Preferences/com.apple.SetupAssistant.plist"
+$PlistBuddy -c 'Add :LastSeenCloudProductVersion string 10.'"$OSX_VERS" "$3/Users/$USER/Library/Preferences/com.apple.SetupAssistant.plist"
+
+# Fix ownership now that the above has made a Library folder as root
+chown -R "$USER_UID":20 "$3/Users/$USER"
+
+# Disable Diagnostics submissions prompt if 10.10
+# http://macops.ca/diagnostics-prompt-yosemite
+if [ "$OSX_VERS" -ge 10 ]; then
+    # Apple's defaults
+    SUBMIT_TO_APPLE=YES
+    SUBMIT_TO_APP_DEVELOPERS=NO
+
+    CRASHREPORTER_SUPPORT="$3/Library/Application Support/CrashReporter"
+    CRASHREPORTER_DIAG_PLIST="${CRASHREPORTER_SUPPORT}/DiagnosticMessagesHistory.plist"
+    if [ ! -d "${CRASHREPORTER_SUPPORT}" ]; then
+        mkdir "${CRASHREPORTER_SUPPORT}"
+        chmod 775 "${CRASHREPORTER_SUPPORT}"
+        chown root:admin "${CRASHREPORTER_SUPPORT}"
+    fi
+    for key in AutoSubmit AutoSubmitVersion ThirdPartyDataSubmit ThirdPartyDataSubmitVersion; do
+        $PlistBuddy -c "Delete :$key" "${CRASHREPORTER_DIAG_PLIST}" 2> /dev/null
+    done
+    $PlistBuddy -c "Add :AutoSubmit bool ${SUBMIT_TO_APPLE}" "${CRASHREPORTER_DIAG_PLIST}"
+    $PlistBuddy -c "Add :AutoSubmitVersion integer 4" "${CRASHREPORTER_DIAG_PLIST}"
+    $PlistBuddy -c "Add :ThirdPartyDataSubmit bool ${SUBMIT_TO_APP_DEVELOPERS}" "${CRASHREPORTER_DIAG_PLIST}"
+    $PlistBuddy -c "Add :ThirdPartyDataSubmitVersion integer 4" "${CRASHREPORTER_DIAG_PLIST}"
+fi
+
+# Disable loginwindow screensaver to save CPU cycles
+$PlistBuddy -c 'Add :loginWindowIdleTime integer 0' "$3/Library/Preferences/com.apple.screensaver.plist"
+
+# Disable the welcome screen
+touch "$3/private/var/db/.AppleSetupDone"
+`, inv, template.FuncMap{})
+
+	return result, err
 }
 
 func renderUserPlistTemplate(accountUsername, accountImageBase64, accountGeneratedUID string) (string, error) {
@@ -269,8 +767,7 @@ func renderUserPlistTemplate(accountUsername, accountImageBase64, accountGenerat
 	</array>
 </dict>
 </plist>
-`,
-		inv, template.FuncMap{})
+`, inv, template.FuncMap{})
 
 	return result, err
 }
