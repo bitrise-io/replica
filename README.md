@@ -8,9 +8,9 @@ and [https://spin.atomicobject.com/2015/11/17/vagrant-osx/](https://spin.atomico
 
 ## Links
 
-* https://spin.atomicobject.com/2015/11/17/vagrant-osx/
-    * https://github.com/timsutton/osx-vm-templates
-
+* [Developing on OS X Inside Vagrant - automated MacOS vagrant box creation](https://spin.atomicobject.com/2015/11/17/vagrant-osx/)
+    * Using: https://github.com/timsutton/osx-vm-templates
+* [New Adventures in Automating OS X Installs with startosinstall](https://macops.ca/new-adventures-in-automating-os-x-installs-with-startosinstall)
 
 ## InstallDMG location:
 
