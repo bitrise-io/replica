@@ -1,6 +1,5 @@
-if [ "$AUTOLOGIN" != "true" ] && [ "$AUTOLOGIN" != "1" ]; then
-  exit
-fi
+#!/bin/bash
+set -ex
 
 echo "Enabling automatic GUI login for the '$USERNAME' user.."
 
