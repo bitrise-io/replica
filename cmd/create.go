@@ -68,6 +68,7 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 		return fmt.Errorf("Failed to create output directory (path:%s), error: %s", outDir, err)
 	}
 
+	// ESD="$ESD/Contents/SharedSupport/InstallESD.dmg"
 	installESDPath := filepath.Join(installMacOSAppPath, "Contents/SharedSupport/InstallESD.dmg")
 	if isExist, err := pathutil.IsPathExists(installESDPath); err != nil {
 		return fmt.Errorf("Failed to locate InstallESD.dmg, error: %s", err)
@@ -95,12 +96,14 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 	{
 		// SHADOW_FILE=$(/usr/bin/mktemp /tmp/veewee-osx-shadow.XXXX)
 		tmpESDShadowFilePath := filepath.Join(tmpDir, "esd-shadow")
+		// rm "$SHADOW_FILE"
 		if isExist, err := pathutil.IsPathExists(tmpESDShadowFilePath); err != nil {
 			return fmt.Errorf("Failed to check whether the temporary ESD shadow file already exists, error: %s", err)
 		} else if isExist {
 			return fmt.Errorf("Temporary ESD shadow file already exists at path: %s", tmpESDShadowFilePath)
 		}
 
+		// hdiutil attach "$ESD" -mountpoint "$MNT_ESD" -shadow "$SHADOW_FILE" -nobrowse -owners on
 		cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
 			"attach", installESDPath,
 			"-mountpoint", tmpESDMountDir,
@@ -127,21 +130,24 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 	}
 
 	fmt.Println()
+	// msg_status "Mounting BaseSystem.."
 	log.Println(colorstring.Green(" => Mounting BaseSystem.."))
 	macOSVersion := MacOSVersionModel{}
 	// BASE_SYSTEM_DMG="$MNT_ESD/BaseSystem.dmg"
 	baseSystemDMGPath := filepath.Join(tmpESDMountDir, "BaseSystem.dmg")
+	// MNT_BASE_SYSTEM=$(/usr/bin/mktemp -d /tmp/veewee-osx-basesystem.XXXX)
+	tmpBaseSystemMountDirPath := filepath.Join(tmpDir, "mnt", "basesystem")
 	{
 		if isExist, err := pathutil.IsPathExists(baseSystemDMGPath); err != nil {
 			return fmt.Errorf("Failed to check whether BaseSystem.dmg exists (path:%s), error: %s", baseSystemDMGPath, err)
 		} else if !isExist {
 			return fmt.Errorf("BaseSystem.dmg does not exist (path:%s)", baseSystemDMGPath)
 		}
-		// MNT_BASE_SYSTEM=$(/usr/bin/mktemp -d /tmp/veewee-osx-basesystem.XXXX)
-		tmpBaseSystemMountDirPath := filepath.Join(tmpDir, "mnt", "basesystem")
+
 		if err := pathutil.EnsureDirExist(tmpBaseSystemMountDirPath); err != nil {
 			return fmt.Errorf("Failed to create temporary 'Base System' mount directory, error: %s", err)
 		}
+		// hdiutil attach "$BASE_SYSTEM_DMG" -mountpoint "$MNT_BASE_SYSTEM" -nobrowse -owners on
 		cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
 			"attach", baseSystemDMGPath,
 			"-mountpoint", tmpBaseSystemMountDirPath,
@@ -165,15 +171,20 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 			}
 		}()
 
+		// SYSVER_PLIST_PATH="$MNT_BASE_SYSTEM/System/Library/CoreServices/SystemVersion.plist"
 		systemVersionPlistFilePath := filepath.Join(tmpBaseSystemMountDirPath, "System/Library/CoreServices/SystemVersion.plist")
+
+		// DMG_OS_VERS=$(/usr/libexec/PlistBuddy -c 'Print :ProductVersion' "$SYSVER_PLIST_PATH")
 		macOSVer, err := readMacOSVersionFromPlist(systemVersionPlistFilePath)
 		if err != nil {
 			return fmt.Errorf("Failed to read MacOS version, error: %s", err)
 		}
-		log.Printf("macOSVer: %#v", macOSVer)
+		// msg_status "OS X version detected: 10.$DMG_OS_VERS_MAJOR.$DMG_OS_VERS_MINOR, build $DMG_OS_BUILD"
+		log.Printf("OS X version detected: %#v", macOSVer)
 		macOSVersion = macOSVer
 	}
 
+	// OUTPUT_DMG="$OUT_DIR/OSX_InstallESD_${DMG_OS_VERS}_${DMG_OS_BUILD}.dmg"
 	outDMGPath := filepath.Join(outDir, fmt.Sprintf("OSX_InstallESD_%s_%s.dmg", macOSVersion.Version, macOSVersion.Build))
 	log.Printf("outDMGPath: %s", outDMGPath)
 	if isExist, err := pathutil.IsPathExists(outDMGPath); err != nil {
@@ -183,6 +194,7 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 	}
 
 	fmt.Println()
+	// msg_status "Making firstboot installer pkg.."
 	log.Println(colorstring.Green(" => Making firstboot installer pkg.."))
 	builtPkgPath := ""
 	{
@@ -193,13 +205,17 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 		log.Println(" ==> Created temporary installer pkg directory at path: ", tmpInstallerPkgPath)
 
 		pkgBuildPkgRootPath := filepath.Join(tmpInstallerPkgPath, "pkgroot")
+
+		// mkdir -p "$SUPPORT_DIR/pkgroot/private/var/db/dslocal/nodes/Default/users"
 		if err := pathutil.EnsureDirExist(filepath.Join(pkgBuildPkgRootPath, "private/var/db/dslocal/nodes/Default/users")); err != nil {
 			return fmt.Errorf("Failed to create pkg users dir, error: %s", err)
 		}
+		// mkdir -p "$SUPPORT_DIR/pkgroot/private/var/db/shadow/hash"
 		if err := pathutil.EnsureDirExist(filepath.Join(pkgBuildPkgRootPath, "private/var/db/shadow/hash")); err != nil {
 			return fmt.Errorf("Failed to create pkg hash dir, error: %s", err)
 		}
 
+		// BASE64_IMAGE=$(openssl base64 -in "$IMAGE_PATH")
 		userImagePath := filepath.Join("./data", "vagrant.jpg")
 		imgContBytes, err := fileutil.ReadBytesFromFile(userImagePath)
 		if err != nil {
@@ -216,6 +232,8 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 			multilineBase64UserImage = multilineBase64UserImage + string(c)
 		}
 
+		// render_template "$SUPPORT_DIR/user.plist" > "$SUPPORT_DIR/pkgroot/private/var/db/dslocal/nodes/Default/users/$USER.plist"
+		// USER_GUID=$(/usr/libexec/PlistBuddy -c 'Print :generateduid:0' "$SUPPORT_DIR/user.plist")
 		accountGeneratedUID := "11112222-3333-4444-AAAA-BBBBCCCCDDDD"
 		userPlistContent, err := renderUserPlistTemplate(accountUsername, multilineBase64UserImage, accountGeneratedUID)
 		if err != nil {
@@ -232,16 +250,38 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 		}
 		log.Println("User.plist (" + accountUsername + ".plist) saved into file - [OK]")
 
+		// "$SUPPORT_DIR/generate_shadowhash" "$PASSWORD" > "$SUPPORT_DIR/pkgroot/private/var/db/shadow/hash/$USER_GUID"
+		// # Generate a shadowhash from the supplied password
 		// user shadow hash (password)
 		// generate one with _support/generate_shadowhash: _support/generate_shadowhash PASSWORD
 		// this one is for "vagrant"
-		accountPasswordShadowHash := `0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003F178575D2EE82F9597BD8441A0513827E81F88DF33B39890000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000`
-		accountPasswordShadowHashFilePath := filepath.Join(pkgBuildPkgRootPath,
-			"private/var/db/shadow/hash", accountGeneratedUID)
-		if err := fileutil.WriteStringToFile(accountPasswordShadowHashFilePath, accountPasswordShadowHash); err != nil {
-			return fmt.Errorf("Failed to write account password shadow hash into file (%s), error: %s", accountPasswordShadowHashFilePath, err)
+		accountPasswordShadowHashFilePath := filepath.Join(
+			pkgBuildPkgRootPath, "private/var/db/shadow/hash", accountGeneratedUID)
+		// if err := fileutil.WriteStringToFile(accountPasswordShadowHashFilePath, accountPasswordShadowHash); err != nil {
+		// 	return fmt.Errorf("Failed to write account password shadow hash into file (%s), error: %s", accountPasswordShadowHashFilePath, err)
+		// }
+		{
+			cmd := cmdex.NewCommandWithStandardOuts(
+				"cp",
+				"./data/usr-password-shadow",
+				accountPasswordShadowHashFilePath,
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to run command, error: %s", err)
+			}
 		}
 
+		//
+		// cat "$SUPPORT_DIR/pkg-postinstall" \
+		// | sed -e "s/__USER__PLACEHOLDER__/${USER}/" \
+		// | sed -e "s/__DISABLE_REMOTE_MANAGEMENT__/${DISABLE_REMOTE_MANAGEMENT}/" \
+		// | sed -e "s/__DISABLE_SCREEN_SHARING__/${DISABLE_SCREEN_SHARING}/" \
+		// | sed -e "s/__DISABLE_SIP__/${DISABLE_SIP}/" \
+		// > "$SUPPORT_DIR/tmp/Scripts/postinstall"
+		//
 		disableRemoteManagement := true
 		disableScreenSharing := true
 		disableSIP := false
@@ -251,6 +291,7 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 		}
 
 		postInstallScriptDirPath := filepath.Join(tmpInstallerPkgPath, "tmp/Scripts")
+		// mkdir -p "$SUPPORT_DIR/tmp/Scripts"
 		if err := pathutil.EnsureDirExist(postInstallScriptDirPath); err != nil {
 			return fmt.Errorf("Failed to create post install Scripts directory (path:%s), error: %s", postInstallScriptDirPath, err)
 		}
@@ -265,13 +306,13 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 
 		fmt.Println()
 		log.Println(colorstring.Green(" ==> Building it ..."))
-		// BUILT_COMPONENT_PKG="$SUPPORT_DIR/tmp/veewee-config-component.pkg"
+		// BUILT_COMPONENT_PKG="$SUPPORT_DIR/tmp/config-component.pkg"
 		builtComponentPkgPath := filepath.Join(tmpInstallerPkgPath, "config-component.pkg")
 		{
 			// pkgbuild --quiet \
 			// 	--root "$SUPPORT_DIR/pkgroot" \
 			// 	--scripts "$SUPPORT_DIR/tmp/Scripts" \
-			// 	--identifier com.vagrantup.veewee-config \
+			// 	--identifier com.vagrantup.config \
 			// 	--version 0.1 \
 			// 	"$BUILT_COMPONENT_PKG"
 			cmd := cmdex.NewCommandWithStandardOuts("pkgbuild",
@@ -292,7 +333,7 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 
 		fmt.Println()
 		log.Println(colorstring.Green(" ==> Packaging it ..."))
-		// BUILT_PKG="$SUPPORT_DIR/tmp/veewee-config.pkg"
+		// BUILT_PKG="$SUPPORT_DIR/tmp/config.pkg"
 		builtPkgPath = filepath.Join(tmpInstallerPkgPath, "config.pkg")
 		{
 			// productbuild \
@@ -309,14 +350,33 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 				return fmt.Errorf("Failed to build package, error: %s", err)
 			}
 		}
+
+		// # We'd previously mounted this to check versions
+		// hdiutil detach "$MNT_BASE_SYSTEM"
+		{
+			cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
+				"detach", tmpBaseSystemMountDirPath,
+			)
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to run command, error: %s", err)
+			}
+		}
+
+		// return errors.New("TEST")
 	}
 
 	fmt.Println()
+	// BASE_SYSTEM_DMG_RW="$(/usr/bin/mktemp /tmp/veewee-osx-basesystem-rw.XXXX).dmg"
 	baseSystemDMGRWPath := filepath.Join(tmpDir, "osx-basesystem-rw.dmg")
+	// msg_status "Creating empty read-write DMG located at $BASE_SYSTEM_DMG_RW.."
 	log.Println(colorstring.Green(" => Creating empty read-write DMG located at " + baseSystemDMGRWPath + ".."))
 	// MNT_BASE_SYSTEM="/Volumes/OS X Base System"
 	mountedBaseSystemPath := "/Volumes/OS X Base System"
 	{
+		// hdiutil create -o "$BASE_SYSTEM_DMG_RW" -size 10g -layout SPUD -fs HFS+J
 		{
 			cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
 				"create", "-o", baseSystemDMGRWPath,
@@ -564,7 +624,6 @@ func createInstallDMGFromInstallMacOSApp(installMacOSAppPath string) error {
 
 	// msg_status "On Mavericks and later, the entire modified BaseSystem is our output dmg."
 	// hdiutil convert -format UDZO -o "$OUTPUT_DMG" "$BASE_SYSTEM_DMG_RW"
-	//   -o "$OUTPUT_DMG" "$BASE_SYSTEM_DMG_RW"
 	{
 		cmd := cmdex.NewCommandWithStandardOuts("hdiutil",
 			"convert", "-format", "UDZO",
@@ -716,7 +775,7 @@ func renderUserPlistTemplate(accountUsername, accountImageBase64, accountGenerat
 	inv := UserPlistTemplateInventory{
 		AccountUsername:     accountUsername,
 		AccountImageBase64:  accountImageBase64,
-		AccountGeneratedUID: accountImageBase64,
+		AccountGeneratedUID: accountGeneratedUID,
 	}
 
 	result, err := templateutil.EvaluateTemplateStringToString(`<?xml version="1.0" encoding="UTF-8"?>
