@@ -1,0 +1,76 @@
+{
+  "builders": [
+    {
+      "boot_wait": "2s",
+      "disk_size": 40960,
+      "guest_additions_mode": "disable",
+      "guest_os_type": "MacOS1011_64",
+      "hard_drive_interface": "sata",
+      "iso_checksum_type": "none",
+      "iso_interface": "sata",
+      "iso_url": "{{user `iso_url`}}",
+      "shutdown_command": "echo '{{user `username`}}'|sudo -S shutdown -h now",
+      "ssh_port": 22,
+      "ssh_username": "{{user `username`}}",
+      "ssh_password": "{{user `password`}}",
+      "ssh_wait_timeout": "10000s",
+      "type": "virtualbox-iso",
+      "vboxmanage": [
+        ["modifyvm", "{{.Name}}", "--audiocontroller", "hda"],
+        ["modifyvm", "{{.Name}}", "--boot1", "dvd"],
+        ["modifyvm", "{{.Name}}", "--boot2", "disk"],
+        ["modifyvm", "{{.Name}}", "--chipset", "ich9"],
+        ["modifyvm", "{{.Name}}", "--firmware", "efi"],
+        ["modifyvm", "{{.Name}}", "--hpet", "on"],
+        ["modifyvm", "{{.Name}}", "--keyboard", "usb"],
+        ["modifyvm", "{{.Name}}", "--memory", "2048"],
+        ["modifyvm", "{{.Name}}", "--mouse", "usbtablet"],
+        ["modifyvm", "{{.Name}}", "--vram", "128"],
+        ["storagectl", "{{.Name}}", "--name", "IDE Controller", "--remove"]
+      ]
+    }
+  ],
+  "min_packer_version": "0.7.0",
+  "post-processors": [
+    "vagrant"
+  ],
+  "provisioners": [
+    {
+      "type": "shell-local",
+      "command": "sleep {{user `provisioning_delay`}}"
+    },
+    {
+      "destination": "/private/tmp/set_kcpassword.py",
+      "source": "./scripts/support/set_kcpassword.py",
+      "type": "file"
+    },
+    {
+      "execute_command": "chmod +x {{ .Path }}; sudo {{ .Vars }} {{ .Path }}",
+      "scripts": [
+        "./scripts/vagrant.sh",
+        "./scripts/xcode-cli-tools.sh",
+        "./scripts/add-network-interface-detection.sh",
+        "./scripts/autologin.sh",
+        "./scripts/shrink.sh"
+      ],
+      "environment_vars": [
+        "AUTOLOGIN={{user `autologin`}}",
+        "INSTALL_VAGRANT_KEYS={{user `install_vagrant_keys`}}",
+        "NOCM={{user `nocm`}}",
+        "INSTALL_XCODE_CLI_TOOLS={{user `install_xcode_cli_tools`}}",
+        "PASSWORD={{user `password`}}",
+        "USERNAME={{user `username`}}"
+      ],
+      "type": "shell"
+    }
+  ],
+  "variables": {
+    "autologin": "true",
+    "install_vagrant_keys": "true",
+    "install_xcode_cli_tools": "true",
+    "iso_url": "OSX_InstallESD_10.X.X_XXXXX.dmg",
+    "password": "vagrant",
+    "provisioning_delay": "0",
+    "username": "vagrant"
+  }
+}
