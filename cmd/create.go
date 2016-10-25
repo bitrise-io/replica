@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-tools/replica/macosinstaller"
 	"github.com/bitrise-tools/replica/vagrantbox"
@@ -40,7 +41,64 @@ func init() {
 
 }
 
+func runToolVersionCommand(toolCmd string, toolCmdArgs ...string) (string, error) {
+	return cmdex.NewCommand(toolCmd, toolCmdArgs...).RunAndReturnTrimmedCombinedOutput()
+}
+
+func printToolVersions() error {
+	fmt.Println()
+	fmt.Println("---------- TOOL VERSIONS: ----------")
+	fmt.Println()
+
+	{
+		out, err := runToolVersionCommand("vboxmanage", "--version")
+		if err != nil {
+			return fmt.Errorf("Failed to get VirtualBox version, error: %s", err)
+		}
+		fmt.Println(colorstring.Green("* VirtualBox version:"))
+		fmt.Println(out)
+	}
+	{
+		out, err := runToolVersionCommand("vagrant", "version")
+		if err != nil {
+			return fmt.Errorf("Failed to get vagrant version, error: %s", err)
+		}
+		fmt.Println()
+		fmt.Println(colorstring.Green("* vagrant version:"))
+		fmt.Println(out)
+	}
+	{
+		out, err := runToolVersionCommand("packer", "version")
+		if err != nil {
+			return fmt.Errorf("Failed to get packer version, error: %s", err)
+		}
+		fmt.Println()
+		fmt.Println(colorstring.Green("* packer version:"))
+		fmt.Println(out)
+	}
+	{
+		out, err := runToolVersionCommand("sw_vers")
+		if err != nil {
+			return fmt.Errorf("Failed to get MacOS version, error: %s", err)
+		}
+		fmt.Println()
+		fmt.Println(colorstring.Green("* Host MacOS version:"))
+		fmt.Println(out)
+	}
+
+	fmt.Println()
+	fmt.Println("NOTES: add your notes here")
+	fmt.Println("------------------------------------")
+	fmt.Println()
+
+	return nil
+}
+
 func createVagrantBoxFromInstallMacOSApp(installMacOSAppPath string) error {
+	if err := printToolVersions(); err != nil {
+		return fmt.Errorf("Failed to print tool versions - missing tool - error: %s", err)
+	}
+
 	log.Printf("installMacOSAppPath: %s", installMacOSAppPath)
 
 	macOSInstallDMGPath, err := macosinstaller.CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath)

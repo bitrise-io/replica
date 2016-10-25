@@ -21,6 +21,18 @@ and [https://spin.atomicobject.com/2015/11/17/vagrant-osx/](https://spin.atomico
 
 ## TODO
 
+- auto add the created box into vagrant
+- tool versions: auto save into file if create is successful
+- save vagrant box into _out, and maybe expose commands to only do parts (prep | packer)
+- delete tmp dir, unless error or flag passed
+- password: try to write it into file from string
+
 - elimintate `cd`s - generate the files right where it have to be
 - annotate the code, based on the original
 - remove `veewee` from everywhere
+
+
+## Tested tool versions
+
+You can find the tool versions we tested with in the `TESTED_TOOL_VERSIONS.md`
+file. __Feel free to add your tool versions report to the list!__

@@ -455,7 +455,7 @@ func CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath string) (string, er
 			// sudo mv -v "$MNT_ESD/Packages" "$MNT_BASE_SYSTEM/System/Installation/"
 			{
 				cmd := cmdex.NewCommandWithStandardOuts("sudo",
-					"mv",
+					"mv", "-v",
 					filepath.Join(tmpESDMountDir, "Packages"),
 					filepath.Join(mountedBaseSystemPath, "System/Installation")+"/",
 				)
