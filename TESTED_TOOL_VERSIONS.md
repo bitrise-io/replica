@@ -21,6 +21,9 @@ ProductName:	Mac OS X
 ProductVersion:	10.12
 BuildVersion:	16A323
 
+* Mac hardware version:
+hw.model: MacBookPro11,1
+
 NOTES: we saw occasional kernel panics / reboots (on the host Mac!)
 with this combination, during the box preparation process
 ```
