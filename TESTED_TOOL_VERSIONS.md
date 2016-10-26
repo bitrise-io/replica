@@ -8,7 +8,28 @@
 Vagrant 1.8.6
 
 * packer version:
-0.10.2
+Packer v0.11.0
+
+* Host MacOS version:
+ProductName:	Mac OS X
+ProductVersion:	10.12.1
+BuildVersion:	16B2555
+
+* Mac hardware version:
+hw.model: MacBookPro11,1
+
+NOTES: so far worked perfectly
+```
+
+```
+* VirtualBox version:
+5.1.8r111374
+
+* vagrant version:
+Vagrant 1.8.6
+
+* packer version:
+Packer v0.10.2
 
 * Host MacOS version:
 ProductName:	Mac OS X
@@ -29,7 +50,7 @@ NOTES: so far worked perfectly
 Vagrant 1.8.6
 
 * packer version:
-0.10.2
+Packer v0.10.2
 
 * Host MacOS version:
 ProductName:	Mac OS X
