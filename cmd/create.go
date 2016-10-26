@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/replica/macosinstaller"
 	"github.com/bitrise-tools/replica/vagrantbox"
 	"github.com/spf13/cobra"
@@ -53,6 +54,15 @@ func createVagrantBoxFromInstallMacOSApp(installMacOSAppPath string) error {
 	}
 	fmt.Println()
 	log.Println(colorstring.Green("Done. Built image is located at " + macOSInstallDMGPath + "."))
+	fmt.Println()
+
+	fmt.Println()
+
+	if isInstall, err := goinp.AskForBoolWithDefault("Do you want to create a vagrant box using the installer?", true); err != nil {
+		return fmt.Errorf("Invalid input, error: %s", err)
+	} else if !isInstall {
+		return nil
+	}
 	fmt.Println()
 
 	fmt.Println()
