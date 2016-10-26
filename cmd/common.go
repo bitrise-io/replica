@@ -25,7 +25,7 @@ func printToolVersions() error {
 		fmt.Println(out)
 	}
 	{
-		out, err := runToolVersionCommand("vagrant", "version")
+		out, err := runToolVersionCommand("vagrant", "--version")
 		if err != nil {
 			return fmt.Errorf("Failed to get vagrant version, error: %s", err)
 		}

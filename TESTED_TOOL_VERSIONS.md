@@ -2,19 +2,34 @@
 
 ```
 * VirtualBox version:
+5.1.8r111374
+
+* vagrant version:
+Vagrant 1.8.6
+
+* packer version:
+0.10.2
+
+* Host MacOS version:
+ProductName:	Mac OS X
+ProductVersion:	10.12.1
+BuildVersion:	16B2555
+
+* Mac hardware version:
+hw.model: MacBookPro11,1
+
+NOTES: so far worked perfectly
+```
+
+```
+* VirtualBox version:
 5.1.6r110634
 
 * vagrant version:
-Installed Version: 1.8.6
-Latest Version: 1.8.6
-
-You're running an up-to-date version of Vagrant!
+Vagrant 1.8.6
 
 * packer version:
-Packer v0.10.2
-
-Your version of Packer is out of date! The latest version
-is 0.11.0. You can update by downloading from www.packer.io
+0.10.2
 
 * Host MacOS version:
 ProductName:	Mac OS X
