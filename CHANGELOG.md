@@ -36,22 +36,6 @@ That's all, you're ready to go!
 
 * Fixing the release process / workflow
 
-### Install or upgrade
-
-To install this version, run the following commands (in a bash shell):
-
-```
-curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.1/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
-```
-
-Then:
-
-```
-chmod +x /usr/local/bin/replica
-```
-
-That's all, you're ready to go!
-
 ### Release Commits - v0.9.0 -> 0.9.1
 
 * [c5a6bed] Viktor Benei - v0.9.1 - prep (2016 Nov 15)
