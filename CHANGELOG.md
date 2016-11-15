@@ -1,6 +1,34 @@
-## Changelog (Current version: 0.9.1)
+## Changelog (Current version: 0.9.2)
 
 -----------------
+
+## 0.9.2 (2016 Nov 15)
+
+### Release Notes
+
+* One more release fix
+
+### Install or upgrade
+
+To install this version, run the following commands (in a bash shell):
+
+```
+curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.2/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+```
+
+Then:
+
+```
+chmod +x /usr/local/bin/replica
+```
+
+That's all, you're ready to go!
+
+### Release Commits - 0.9.1 -> 0.9.2
+
+* [a8e331d] Viktor Benei - v0.9.2 - version (2016 Nov 15)
+* [9ccbf8f] Viktor Benei - one more release fix (2016 Nov 15)
+
 
 ## 0.9.1 (2016 Nov 15)
 
