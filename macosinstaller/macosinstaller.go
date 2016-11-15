@@ -274,7 +274,9 @@ func CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath string) (string, er
 		}
 		log.Println("Post Install script saved into file - [OK]")
 		// chmod a+x "$SUPPORT_DIR/tmp/Scripts/postinstall"
-		os.Chmod(postInstallScriptPath, 0755)
+		if err := os.Chmod(postInstallScriptPath, 0755); err != nil {
+			return "", fmt.Errorf("Failed to chmod postInstallScriptPath, error: %s", err)
+		}
 		log.Println("Post Install script made executable - [OK]")
 
 		fmt.Println()
@@ -522,7 +524,9 @@ func CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath string) (string, er
 					return "", fmt.Errorf("Failed to write rc.cdrom.local content into file, error: %s", err)
 				}
 				// chmod a+x "$CDROM_LOCAL"
-				os.Chmod(cdromDotLocalFilePath, 0755)
+				if err := os.Chmod(cdromDotLocalFilePath, 0755); err != nil {
+					return "", fmt.Errorf("Failed to chmod cdromDotLocalFilePath, error: %s", err)
+				}
 
 				{
 					// mkdir "$PACKAGES_DIR/Extras"
