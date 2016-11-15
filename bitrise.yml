@@ -127,7 +127,7 @@ workflows:
 
             Build URL: ${BITRISE_BUILD_URL}
 
-  create-release:
+  _create-release-binary:
     before_run:
     - _test
     steps:
@@ -144,11 +144,22 @@ workflows:
             binversion="$(_bin/tmpbin version)"
             echo "binversion: ${binversion}"
             mkdir -p _bin/${binversion}
-            finalpth=_bin/${binversion}/${BITRISE_BIN_NAME}-$(uname -s)-$(uname -m)
+            bin_name=${BITRISE_BIN_NAME}-$(uname -s)-$(uname -m)
+            finalpth=_bin/${binversion}/${bin_name}
             echo "finalpth: ${finalpth}"
             mv _bin/tmpbin "${finalpth}"
+            cp "${finalpth}" "${BITRISE_DEPLOY_DIR}/${bin_name}"
             # register the version for next steps
             envman add --key RELEASE_VERSION --value "${binversion}"
+
+  publish-release:
+    before_run:
+    - _create-release-binary
+
+  prepare-release:
+    before_run:
+    - _create-release-binary
+    steps:
     - script:
         title: Creating release changelog template
         inputs:
@@ -161,6 +172,19 @@ workflows:
             fi
             set -ex
             releaseman --ci create-changelog --version="${RELEASE_VERSION}"
+
+  create-release:
+    before_run:
+    - _create-release-binary
+    steps:
+    - script:
+        title: Creating release changelog template
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            git tag "v${RELEASE_VERSION}"
+            git push origin tags/v0.9.0
 
   create-test-binaries:
     steps:
