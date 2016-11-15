@@ -77,6 +77,7 @@ workflows:
 
   install:
     before_run:
+    - _install_test_tools
     - _test
     steps:
     - script:
@@ -129,6 +130,7 @@ workflows:
 
   _create-release-binary:
     before_run:
+    - _install_test_tools
     - _test
     steps:
     - script:
