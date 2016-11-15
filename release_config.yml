@@ -4,10 +4,34 @@ release:
 changelog:
   path: CHANGELOG.md
   content_template: |-
-    {{range .ContentItems}}### {{.EndTaggedCommit.Tag}} - {{.StartTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
+    {{range .ContentItems}}## {{.EndTaggedCommit.Tag}} ({{.EndTaggedCommit.Date.Format "2006 Jan 02"}})
+
+    ### Release Notes
+
+    * __BREAKING__ : change 1
+    * change 2
+
+    ### Install or upgrade
+
+    To install this version, run the following commands (in a bash shell):
+
+    ```
+    curl -fL https://github.com/bitrise-tools/replica/releases/download/{{.EndTaggedCommit.Tag}}/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+    ```
+
+    Then:
+
+    ```
+    chmod +x /usr/local/bin/replica
+    ```
+
+    That's all, you're ready to go!
+
+    ### Release Commits - {{.StartTaggedCommit.Tag}} -> {{.EndTaggedCommit.Tag}}
 
     {{range .Commits}}* [{{firstChars .Hash 7}}] {{.Author}} - {{.Message}} ({{.Date.Format "2006 Jan 02"}})
     {{end}}
+
     {{end}}
   header_template: '## Changelog (Current version: {{.Version}})'
   footer_template: 'Updated: {{.CurrentDate.Format "2006 Jan 02"}}'
