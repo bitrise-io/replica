@@ -1,1 +1,3 @@
 _out
+.bitrise*
+.gows.user.yml
