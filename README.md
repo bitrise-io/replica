@@ -38,11 +38,23 @@ __Step 1 takes about 3 mins and requires about 20 GB free disk space in total__,
 from which the created DMG will take ~5.5 GB,
 and an additional ~15 GB free disk space will be used during the creation
 for temporary files, which are deleted when the step successfully completes.
+After the `create` command finishes feel free to move the created
+DMG file to an external hard drive.
 
 __Step 2 takes about 35-40 mins and requires about 25 GB free disk space in total__,
 from which the created `box` file will take ~9 GB,
 and an additional ~17 GB free disk space will be used during the creation
 for temporary files, which are deleted when the step completes.
+After the `create` command finishes feel free to move the created
+`vagrant` `box` file to an external hard drive.
+
+
+### `replica create vagrant`
+
+Creates and boots a `vagrant` VM, from a `vagrant` box,
+in the directory you specify.
+
+__This step takes about 4 mins and requires about 20 GB free disk space in total__.
 
 
 ## Links
