@@ -98,4 +98,6 @@ You can do that by running: `bitrise run embed-resources`
 - annotate the code, based on the original
 - remove `veewee` from everywhere
 
+- add support for `docker` / the Linux environment
+
 

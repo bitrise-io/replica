@@ -1,6 +1,35 @@
-## Changelog (Current version: 0.9.3)
+## Changelog (Current version: 0.9.4)
 
 -----------------
+
+## 0.9.4 (2016 Nov 16)
+
+### Release Notes
+
+* New command: `replica create vagrant`, to create and boot
+  a `vagrant` VM.
+
+### Install or upgrade
+
+To install this version, run the following commands (in a bash shell):
+
+```
+curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.4/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+```
+
+Then:
+
+```
+chmod +x /usr/local/bin/replica
+```
+
+That's all, you're ready to go!
+
+### Release Commits - 0.9.3 -> 0.9.4
+
+* [15c919d] Viktor Benei - v0.9.4 - version (2016 Nov 16)
+* [f7a8443] Viktor Benei - base `replica create vagrant` command (#2) (2016 Nov 16)
+
 
 ## 0.9.3 (2016 Nov 16)
 
