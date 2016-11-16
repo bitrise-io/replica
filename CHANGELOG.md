@@ -1,6 +1,39 @@
-## Changelog (Current version: 0.9.2)
+## Changelog (Current version: 0.9.3)
 
 -----------------
+
+## 0.9.3 (2016 Nov 16)
+
+### Release Notes
+
+* Completely stand alone binary, with embedded resources
+* new `create` sub commands:
+    * `replica create dmg` : creates the auto-install DMG, then stops
+    * `replica create box` : creates the `vagrant` box from an input auto-install DMG
+    * `replica create` performs both, but you can now perform these separately
+      with the new sub commands
+
+### Install or upgrade
+
+To install this version, run the following commands (in a bash shell):
+
+```
+curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.3/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+```
+
+Then:
+
+```
+chmod +x /usr/local/bin/replica
+```
+
+That's all, you're ready to go!
+
+### Release Commits - 0.9.2 -> 0.9.3
+
+* [12adced] Viktor Benei - v0.9.3 - version (2016 Nov 16)
+* [07b1793] Viktor Benei - Feature/completely stand alone base release (#1) (2016 Nov 16)
+
 
 ## 0.9.2 (2016 Nov 15)
 
@@ -45,4 +78,4 @@ That's all, you're ready to go!
 
 -----------------
 
-Updated: 2016 Nov 15
+Updated: 2016 Nov 16
