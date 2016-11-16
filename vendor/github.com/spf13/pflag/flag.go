@@ -416,7 +416,7 @@ func Set(name, value string) error {
 // otherwise, the default values of all defined flags in the set.
 func (f *FlagSet) PrintDefaults() {
 	usages := f.FlagUsages()
-	fmt.Fprint(f.out(), usages)
+	fmt.Fprintf(f.out(), "%s", usages)
 }
 
 // defaultIsZeroValue returns true if the default value for this flag represents
@@ -434,20 +434,10 @@ func (f *Flag) defaultIsZeroValue() bool {
 		return f.DefValue == ""
 	case *ipValue, *ipMaskValue, *ipNetValue:
 		return f.DefValue == "<nil>"
-	case *intSliceValue, *stringSliceValue, *stringArrayValue:
+	case *intSliceValue, *stringSliceValue:
 		return f.DefValue == "[]"
 	default:
-		switch f.Value.String() {
-		case "false":
-			return true
-		case "<nil>":
-			return true
-		case "":
-			return true
-		case "0":
-			return true
-		}
-		return false
+		return true
 	}
 }
 
@@ -514,7 +504,7 @@ func (f *FlagSet) FlagUsages() string {
 		if len(flag.NoOptDefVal) > 0 {
 			switch flag.Value.Type() {
 			case "string":
-				line += fmt.Sprintf("[=\"%s\"]", flag.NoOptDefVal)
+				line += fmt.Sprintf("[=%q]", flag.NoOptDefVal)
 			case "bool":
 				if flag.NoOptDefVal != "true" {
 					line += fmt.Sprintf("[=%s]", flag.NoOptDefVal)
@@ -534,7 +524,7 @@ func (f *FlagSet) FlagUsages() string {
 		line += usage
 		if !flag.defaultIsZeroValue() {
 			if flag.Value.Type() == "string" {
-				line += fmt.Sprintf(" (default \"%s\")", flag.DefValue)
+				line += fmt.Sprintf(" (default %q)", flag.DefValue)
 			} else {
 				line += fmt.Sprintf(" (default %s)", flag.DefValue)
 			}

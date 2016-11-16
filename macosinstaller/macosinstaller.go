@@ -12,12 +12,20 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/replica/resources"
 )
 
 // CreateInstallDMGFromInstallMacOSApp ...
 func CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath string) (string, error) {
 	accountUsername := "vagrant"
 	// accountPassword := "vagrant"
+
+	dataBox, err := resources.GetResourcesBox()
+	if err != nil {
+		return "", fmt.Errorf("Failed to find 'data' resource box, error: %s", err)
+	}
+
 	outDir := "./_out"
 	{
 		p, err := pathutil.AbsPath(outDir)
@@ -163,7 +171,16 @@ func CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath string) (string, er
 	if isExist, err := pathutil.IsPathExists(outDMGPath); err != nil {
 		return "", fmt.Errorf("Failed to check whether the output DMG file already exists, error: %s", err)
 	} else if isExist {
-		return "", fmt.Errorf("Output DMG already exists (at path: %s) - covardly refusing to overwrite it", outDMGPath)
+		if isShouldOverwrite, err := goinp.AskForBoolWithDefault(
+			fmt.Sprintf("A DMG already exists at the path (%s), do you want to overwrite it?", outDMGPath), true); err != nil {
+			return "", fmt.Errorf("Failed to read input, error: %s", err)
+		} else if isShouldOverwrite {
+			if err := os.Remove(outDMGPath); err != nil {
+				return "", fmt.Errorf("Failed to delete DMG (path: %s), error: %s", outDMGPath, err)
+			}
+		} else {
+			return "", fmt.Errorf("Output DMG already exists (at path: %s) - covardly refusing to overwrite it", outDMGPath)
+		}
 	}
 
 	fmt.Println()
@@ -189,10 +206,9 @@ func CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath string) (string, er
 		}
 
 		// BASE64_IMAGE=$(openssl base64 -in "$IMAGE_PATH")
-		userImagePath := filepath.Join("./data", "vagrant.jpg")
-		imgContBytes, err := fileutil.ReadBytesFromFile(userImagePath)
+		imgContBytes, err := dataBox.Bytes("vagrant.jpg")
 		if err != nil {
-			return "", fmt.Errorf("Failed to read user account image (path:%s), error: %s", userImagePath, err)
+			return "", fmt.Errorf("Failed to read user account image, error: %s", err)
 		}
 		// Originally this was generate with: $ openssl base64 -in path/to/image.jpg
 		rawBase64UserImage := base64.StdEncoding.EncodeToString(imgContBytes)
@@ -234,16 +250,16 @@ func CreateInstallDMGFromInstallMacOSApp(installMacOSAppPath string) (string, er
 		// 	return "", fmt.Errorf("Failed to write account password shadow hash into file (%s), error: %s", accountPasswordShadowHashFilePath, err)
 		// }
 		{
-			cmd := cmdex.NewCommandWithStandardOuts(
-				"cp",
-				"./data/usr-password-shadow",
-				accountPasswordShadowHashFilePath,
-			)
+			usrPswShadowBytes, err := dataBox.Bytes("usr-password-shadow")
+			if err != nil {
+				return "", fmt.Errorf("Failed to read user password shadow data, error: %s", err)
+			}
+
 			fmt.Println()
-			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println(" => Writing user password shadow hash into file ...")
 			fmt.Println()
-			if err := cmd.Run(); err != nil {
-				return "", fmt.Errorf("Failed to run command, error: %s", err)
+			if err := fileutil.WriteBytesToFile(accountPasswordShadowHashFilePath, usrPswShadowBytes); err != nil {
+				return "", fmt.Errorf("Failed to write user password shadow hash into file (path: %s), error: %s", accountPasswordShadowHashFilePath, err)
 			}
 		}
 

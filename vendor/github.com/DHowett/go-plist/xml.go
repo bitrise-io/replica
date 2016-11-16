@@ -198,17 +198,11 @@ func (p *xmlPlistParser) parseXMLElement(element xml.StartElement) *plistValue {
 		}
 
 		s := string(charData)
-		if len(s) == 0 {
-			panic(errors.New("invalid empty <integer/>"))
-		}
-
 		if s[0] == '-' {
-			s, base := unsignedGetBase(s[1:])
-			n := mustParseInt("-"+s, base, 64)
+			n := mustParseInt(string(charData), 10, 64)
 			return &plistValue{Integer, signedInt{uint64(n), true}}
 		} else {
-			s, base := unsignedGetBase(s)
-			n := mustParseUint(s, base, 64)
+			n := mustParseUint(string(charData), 10, 64)
 			return &plistValue{Integer, signedInt{n, false}}
 		}
 	case "real":

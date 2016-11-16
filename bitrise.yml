@@ -128,10 +128,23 @@ workflows:
 
             Build URL: ${BITRISE_BUILD_URL}
 
+  embed-resources:
+    steps:
+    - script:
+        title: Embed resources
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            go get github.com/GeertJohan/go.rice/rice
+            cd ./resources
+            rice embed-go
+
   _create-release-binary:
     before_run:
     - _install_test_tools
     - _test
+    - embed-resources
     steps:
     - script:
         title: Creating deploy

@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"syscall"
 
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -68,4 +71,20 @@ func printToolVersions() error {
 	fmt.Println()
 
 	return nil
+}
+
+func printFreeDiskSpace() {
+	var stat syscall.Statfs_t
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Println(colorstring.Red(" [!] Failed to get current working directory, error:"), err)
+		return
+	}
+	if err := syscall.Statfs(wd, &stat); err != nil {
+		log.Println(colorstring.Red(" [!] Failed to get file system stats, error:"), err)
+		return
+	}
+	availableSpaceInBytes := stat.Bavail * uint64(stat.Bsize)
+	const KB = uint64(1024)
+	log.Println(" -> (i) Free disk space: ", availableSpaceInBytes/KB/KB/KB, "GB")
 }

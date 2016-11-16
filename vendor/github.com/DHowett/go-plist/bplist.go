@@ -384,10 +384,6 @@ func (p *bplistParser) parseDocument() (pval *plistValue, parseError error) {
 	if p.trailer.NumObjects > uint64(math.Pow(2, 8*float64(p.trailer.ObjectRefSize))) {
 		panic(fmt.Errorf("binary property list contains more objects (%v) than its object ref size (%v bytes) can support", p.trailer.NumObjects, p.trailer.ObjectRefSize))
 	}
-
-	if p.trailer.TopObject >= p.trailer.NumObjects {
-		panic(fmt.Errorf("top object index %v is out of range (only %v objects exist)", p.trailer.TopObject, p.trailer.NumObjects))
-	}
 	p.offtable = make([]uint64, p.trailer.NumObjects)
 
 	// SEEK_SET
@@ -398,9 +394,6 @@ func (p *bplistParser) parseDocument() (pval *plistValue, parseError error) {
 
 	for i := uint64(0); i < p.trailer.NumObjects; i++ {
 		off := p.readSizedInt(int(p.trailer.OffsetIntSize))
-		if off >= uint64(p.trailerOffset) {
-			panic(fmt.Errorf("object %v starts beyond end of plist trailer (%v vs %v)", i, off, p.trailerOffset))
-		}
 		p.offtable[i] = off
 	}
 
@@ -539,11 +532,6 @@ func (p *bplistParser) parseTagAtOffset(off int64) *plistValue {
 		indices := make([]uint64, cnt*2)
 		for i := uint64(0); i < cnt*2; i++ {
 			idx := p.readSizedInt(int(p.trailer.ObjectRefSize))
-
-			if idx >= p.trailer.NumObjects {
-				panic(fmt.Errorf("dictionary contains invalid entry index %d (max %d)", idx, p.trailer.NumObjects))
-			}
-
 			indices[i] = idx
 		}
 		for i := uint64(0); i < cnt; i++ {
@@ -555,17 +543,8 @@ func (p *bplistParser) parseTagAtOffset(off int64) *plistValue {
 			if valueOffset == uint64(off) {
 				panic(fmt.Errorf("dictionary contains self-referential value %x (index %d)", off, i))
 			}
-
 			kval := p.valueAtOffset(keyOffset)
-			if kval == nil || kval.kind != String {
-				panic(fmt.Errorf("dictionary contains non-string key at index %d", i))
-			}
-
-			key, ok := kval.value.(string)
-			if !ok {
-				panic(fmt.Errorf("string-type plist value contains non-string at index %d", i))
-			}
-			subvalues[key] = p.valueAtOffset(valueOffset)
+			subvalues[kval.value.(string)] = p.valueAtOffset(valueOffset)
 		}
 
 		return &plistValue{Dictionary, &dictionary{m: subvalues}}
@@ -575,13 +554,7 @@ func (p *bplistParser) parseTagAtOffset(off int64) *plistValue {
 		arr := make([]*plistValue, cnt)
 		indices := make([]uint64, cnt)
 		for i := uint64(0); i < cnt; i++ {
-			idx := p.readSizedInt(int(p.trailer.ObjectRefSize))
-
-			if idx >= p.trailer.NumObjects {
-				panic(fmt.Errorf("array contains invalid entry index %d (max %d)", idx, p.trailer.NumObjects))
-			}
-
-			indices[i] = idx
+			indices[i] = p.readSizedInt(int(p.trailer.ObjectRefSize))
 		}
 		for i := uint64(0); i < cnt; i++ {
 			valueOffset := p.offtable[indices[i]]
