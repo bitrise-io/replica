@@ -8,6 +8,28 @@
 Vagrant 1.8.6
 
 * packer version:
+Packer v0.12.0
+
+* Host MacOS version:
+ProductName:	Mac OS X
+ProductVersion:	10.12.1
+BuildVersion:	16B2555
+
+* Mac hardware version:
+hw.model: MacBookPro11,1
+
+NOTES: works perfectly - vagrant 1.8.7 has issues with local boxes, don't use that
+or search for a fix, but 1.8.6 works.
+```
+
+```
+* VirtualBox version:
+5.1.8r111374
+
+* vagrant version:
+Vagrant 1.8.6
+
+* packer version:
 Packer v0.11.0
 
 * Host MacOS version:
