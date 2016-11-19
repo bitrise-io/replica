@@ -6,6 +6,22 @@ _Based on the awesome [https://github.com/timsutton/osx-vm-templates](https://gi
 and [https://spin.atomicobject.com/2015/11/17/vagrant-osx/](https://spin.atomicobject.com/2015/11/17/vagrant-osx/) blog post._
 
 
+## Install
+
+Check the [releases](https://github.com/bitrise-tools/replica/releases) page for install instructions.
+
+The `replica` binary is a stand alone binary, which includes every resource
+it uses, so the only tools you have to install are:
+
+- [VirtualBox](https://www.virtualbox.org)
+- [vagrant](https://www.vagrantup.com)
+- [packer](https://www.packer.io)
+
+_Once these are installed, you just have to download the replica binary on macOS
+and run it. That's it, there's no installation process for `replica`,
+just download the binary and run it._
+
+
 ## Supported features
 
 ### `replica create ...`
