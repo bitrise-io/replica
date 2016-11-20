@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	vagrantBoxName = "bitrise-replica-macos"
+	vagrantBoxName           = "bitrise-replica-macos"
+	vagrantInitialSnapshotID = "bitrise-replica-initial"
 )
 
 // vagrantCmd represents the vagrant command
@@ -101,5 +102,29 @@ end
 
 	printFreeDiskSpace()
 	log.Println(colorstring.Green(" => vagrant VM created & ready! [OK]"))
+
+	fmt.Println()
+	log.Println(colorstring.Green(" => Creating an initial snapshot ..."))
+
+	{
+		cmd := cmdex.NewCommandWithStandardOuts("vagrant",
+			"snapshot",
+			"save", vagrantInitialSnapshotID,
+		).SetDir(destinationDirPath)
+
+		fmt.Println()
+		log.Printf("$ %s", cmd.PrintableCommandArgs())
+		fmt.Println()
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("Failed to run command, error: %s", err)
+		}
+	}
+
+	printFreeDiskSpace()
+	log.Println(colorstring.Green(" => Snapshot created! [OK]"))
+	fmt.Println(colorstring.Yellow(" NOTE: you can restore this saved snapshot state of the virtual machine with:"))
+	fmt.Println(" $ vagrant snapshot restore " + vagrantInitialSnapshotID)
+	fmt.Println()
+
 	return nil
 }
