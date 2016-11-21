@@ -189,21 +189,6 @@ func createVagrantSnapshot(vagrantVMDir, snapshotID string) error {
 }
 
 func createVagrantVM(vagrantVMDirPath string, isVagrantDestroyBeforeCreate bool) error {
-	if isVagrantDestroyBeforeCreate {
-		{
-			cmd := cmdex.NewCommandWithStandardOuts("vagrant",
-				"destroy", "-f",
-			).SetDir(vagrantVMDirPath)
-
-			fmt.Println()
-			log.Printf("$ %s", cmd.PrintableCommandArgs())
-			fmt.Println()
-			if err := cmd.Run(); err != nil {
-				return fmt.Errorf("Failed to run command, error: %s", err)
-			}
-		}
-	}
-
 	const vagrantFileContent = `# -*- mode: ruby -*-
 # vi: set ft=ruby :
 
@@ -223,6 +208,21 @@ end
 
 	if err := fileutil.WriteStringToFile(filepath.Join(vagrantVMDirPath, "Vagrantfile"), vagrantFileContent); err != nil {
 		return fmt.Errorf("Failed to write Vagrantfile into the destination directory, error: %s", err)
+	}
+
+	if isVagrantDestroyBeforeCreate {
+		{
+			cmd := cmdex.NewCommandWithStandardOuts("vagrant",
+				"destroy", "-f",
+			).SetDir(vagrantVMDirPath)
+
+			fmt.Println()
+			log.Printf("$ %s", cmd.PrintableCommandArgs())
+			fmt.Println()
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("Failed to run command, error: %s", err)
+			}
+		}
 	}
 
 	{
