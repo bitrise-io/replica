@@ -70,7 +70,9 @@ After the `create` command finishes feel free to move the created
 Creates and boots a `vagrant` VM, from a `vagrant` box,
 in the directory you specify.
 
-__This step takes about 4 mins and requires about 20 GB free disk space in total__.
+__This step takes about 4 mins and requires about 20 GB free disk space in total without `Xcode.app` sync__,
+if you allow `Xcode.app` to be synced into the VM that will take
+an additional ~15 mins and ~10 GB disk space (the size of `Xcode.app`).
 
 
 ## Links
