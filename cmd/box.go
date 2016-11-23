@@ -23,7 +23,8 @@ NOTE: You can create an auto installer DMG with: replica create dmg`,
 			return errors.New("No macOS installer DMG path provided")
 		}
 		installMacOSAppPath := args[0]
-		return createVagrantBox(installMacOSAppPath)
+		_, err := createVagrantBox(installMacOSAppPath)
+		return err
 	},
 }
 
@@ -31,10 +32,10 @@ func init() {
 	createCmd.AddCommand(boxCmd)
 }
 
-func createVagrantBox(macOSAutoInstallerDMGPath string) error {
+func createVagrantBox(macOSAutoInstallerDMGPath string) (string, error) {
 	absInstallerDMGPth, err := pathutil.AbsPath(macOSAutoInstallerDMGPath)
 	if err != nil {
-		return fmt.Errorf("Failed to get absolute path for installer DMG (path was: %s), error: %s", macOSAutoInstallerDMGPath, err)
+		return "", fmt.Errorf("Failed to get absolute path for installer DMG (path was: %s), error: %s", macOSAutoInstallerDMGPath, err)
 	}
 
 	fmt.Println()
@@ -42,11 +43,12 @@ func createVagrantBox(macOSAutoInstallerDMGPath string) error {
 
 	printFreeDiskSpace()
 
-	if err := vagrantbox.CreateVirtualboxVagrantBoxFromPreparedMacOSInstallDMG(absInstallerDMGPth); err != nil {
-		return fmt.Errorf("Failed to create vagrant box, error: %s", err)
+	vagrantBoxPath, err := vagrantbox.CreateVirtualboxVagrantBoxFromPreparedMacOSInstallDMG(absInstallerDMGPth)
+	if err != nil {
+		return vagrantBoxPath, fmt.Errorf("Failed to create vagrant box, error: %s", err)
 	}
 
 	printFreeDiskSpace()
-	log.Println(colorstring.Green(" => vagrant box ready! [OK]"))
-	return nil
+	log.Println(colorstring.Green(" => vagrant box ready! You can find it at:"), vagrantBoxPath)
+	return vagrantBoxPath, nil
 }

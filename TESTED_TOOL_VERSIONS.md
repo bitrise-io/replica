@@ -20,6 +20,9 @@ hw.model: MacBookPro11,1
 
 NOTES: works perfectly - vagrant 1.8.7 has issues with local boxes, don't use that
 or search for a fix, but 1.8.6 works.
+That said, we had kernel panic with this config once, while we were working
+with the virtual machine (not during the creation, but after that, when the
+vagrant VM was created, booted and we tested a couple of things in it).
 ```
 
 ```

@@ -26,6 +26,20 @@ func init() {
 	RootCmd.AddCommand(createCmd)
 }
 
+func printPleaseAddToTestedToolVersions() error {
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("----------------------------------------------------------")
+	fmt.Println("--- Please consider adding your tool version configuration")
+	fmt.Println("--- to the TESTED_TOOL_VERSIONS.md file, to help others!")
+	fmt.Println()
+	if err := printToolVersions(); err != nil {
+		return fmt.Errorf("Failed to print tool versions - missing tool - error: %s", err)
+	}
+	fmt.Println()
+	return nil
+}
+
 func createVagrantBoxFromInstallMacOSApp(installMacOSAppPath string) error {
 	if err := printToolVersions(); err != nil {
 		return fmt.Errorf("Failed to print tool versions - missing tool - error: %s", err)
@@ -43,25 +57,34 @@ func createVagrantBoxFromInstallMacOSApp(installMacOSAppPath string) error {
 	if isInstall, err := goinp.AskForBoolWithDefault("Do you want to create a vagrant box using the installer?", true); err != nil {
 		return fmt.Errorf("Invalid input, error: %s", err)
 	} else if !isInstall {
-		return nil
+		return printPleaseAddToTestedToolVersions()
 	}
 
 	fmt.Println()
 	fmt.Println()
-	if err := createVagrantBox(macOSInstallDMGPath); err != nil {
+	vagrantBoxPath, err := createVagrantBox(macOSInstallDMGPath)
+	if err != nil {
 		return err
 	}
 
 	fmt.Println()
 	fmt.Println()
-	fmt.Println("----------------------------------------------------------")
-	fmt.Println("--- Please consider adding your tool version configuration")
-	fmt.Println("--- to the TESTED_TOOL_VERSIONS.md file, to help others!")
-	fmt.Println()
-	if err := printToolVersions(); err != nil {
-		return fmt.Errorf("Failed to print tool versions - missing tool - error: %s", err)
+	if isCreateVagrantVM, err := goinp.AskForBoolWithDefault("Do you want to create and provision a Vagrant virtual machine with the box?", true); err != nil {
+		return fmt.Errorf("Invalid input, error: %s", err)
+	} else if !isCreateVagrantVM {
+		return printPleaseAddToTestedToolVersions()
 	}
-	fmt.Println()
 
-	return nil
+	vagrantDirPth, err := goinp.AskForString("Please specify a path for the vagrant directory (does not have to exist yet)")
+	if err != nil {
+		return fmt.Errorf("Invalid input, error: %s", err)
+	}
+
+	fmt.Println()
+	fmt.Println()
+	if err := createAndProvisionVagrantVM(vagrantDirPth, false, vagrantBoxPath); err != nil {
+		return err
+	}
+
+	return printPleaseAddToTestedToolVersions()
 }
