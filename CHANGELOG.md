@@ -1,6 +1,43 @@
-## Changelog (Current version: 0.9.4)
+## Changelog (Current version: 0.9.5)
 
 -----------------
+
+## 0.9.5 (2016 Nov 23)
+
+### Release Notes
+
+* `replica create vagrant` now auto creates a vagrant/VirtualBox snapshot after an initial, successful boot,
+  so that you can revert to this "vanilla" state any time you want to
+* macOS Sierra: suppressing the initial Siri prompt (first login)
+* `replica create` now includes `replica create vagrant`, if you allow it when prompted (after the box is
+  successfully created)
+
+### Install or upgrade
+
+To install this version, run the following commands (in a bash shell):
+
+```
+curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.5/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+```
+
+Then:
+
+```
+chmod +x /usr/local/bin/replica
+```
+
+That's all, you're ready to go!
+
+### Release Commits - 0.9.4 -> 0.9.5
+
+* [46b84c1] Viktor Benei - auto create vagrant if user allows it, in full `replica create` (#6) (2016 Nov 23)
+* [073e843] Viktor Benei - version number 0.9.5 (2016 Nov 22)
+* [8607c3e] Viktor Benei - Feature/siri prompt suppress (#5) (2016 Nov 21)
+* [ccb49fd] Viktor Benei - Feature/vagrant rev (#4) (2016 Nov 21)
+* [f56df31] Viktor Benei - replica create vagrant - auto create a snapshot (#3) (2016 Nov 20)
+* [b248a73] Viktor Benei - tested tool versions addition (2016 Nov 20)
+* [a349eaf] Viktor Benei - install section (2016 Nov 19)
+
 
 ## 0.9.4 (2016 Nov 16)
 
@@ -107,4 +144,4 @@ That's all, you're ready to go!
 
 -----------------
 
-Updated: 2016 Nov 16
+Updated: 2016 Nov 23
