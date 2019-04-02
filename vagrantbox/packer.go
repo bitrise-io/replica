@@ -8,7 +8,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-tools/replica/resources"
+	"github.com/bitrise-io/replica/resources"
 )
 
 // CreateVirtualboxVagrantBoxFromPreparedMacOSInstallDMG ...

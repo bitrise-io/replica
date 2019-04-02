@@ -17,7 +17,7 @@
 To install this version, run the following commands (in a bash shell):
 
 ```
-curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.5/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+curl -fL https://github.com/bitrise-io/replica/releases/download/0.9.5/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
 ```
 
 Then:
@@ -51,7 +51,7 @@ That's all, you're ready to go!
 To install this version, run the following commands (in a bash shell):
 
 ```
-curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.4/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+curl -fL https://github.com/bitrise-io/replica/releases/download/0.9.4/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
 ```
 
 Then:
@@ -84,7 +84,7 @@ That's all, you're ready to go!
 To install this version, run the following commands (in a bash shell):
 
 ```
-curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.3/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+curl -fL https://github.com/bitrise-io/replica/releases/download/0.9.3/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
 ```
 
 Then:
@@ -112,7 +112,7 @@ That's all, you're ready to go!
 To install this version, run the following commands (in a bash shell):
 
 ```
-curl -fL https://github.com/bitrise-tools/replica/releases/download/0.9.2/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+curl -fL https://github.com/bitrise-io/replica/releases/download/0.9.2/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
 ```
 
 Then:

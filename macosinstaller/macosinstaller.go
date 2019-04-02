@@ -13,7 +13,7 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/replica/resources"
+	"github.com/bitrise-io/replica/resources"
 )
 
 // CreateInstallDMGFromInstallMacOSApp ...

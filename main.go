@@ -1,6 +1,6 @@
 package main
 
-import "github.com/bitrise-tools/replica/cmd"
+import "github.com/bitrise-io/replica/cmd"
 
 func main() {
 	cmd.Execute()

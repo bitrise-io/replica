@@ -7,7 +7,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-tools/replica/vagrantbox"
+	"github.com/bitrise-io/replica/vagrantbox"
 	"github.com/spf13/cobra"
 )
 

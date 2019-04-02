@@ -16,7 +16,7 @@ changelog:
     To install this version, run the following commands (in a bash shell):
 
     ```
-    curl -fL https://github.com/bitrise-tools/replica/releases/download/{{.EndTaggedCommit.Tag}}/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
+    curl -fL https://github.com/bitrise-io/replica/releases/download/{{.EndTaggedCommit.Tag}}/replica-$(uname -s)-$(uname -m) > /usr/local/bin/replica
     ```
 
     Then:

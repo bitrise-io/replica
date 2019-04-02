@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/bitrise-io/go-utils/colorstring"
-	"github.com/bitrise-tools/replica/macosinstaller"
+	"github.com/bitrise-io/replica/macosinstaller"
 	"github.com/spf13/cobra"
 )
 

@@ -8,7 +8,7 @@ and [https://spin.atomicobject.com/2015/11/17/vagrant-osx/](https://spin.atomico
 
 ## Install
 
-Check the [releases](https://github.com/bitrise-tools/replica/releases) page for install instructions.
+Check the [releases](https://github.com/bitrise-io/replica/releases) page for install instructions.
 
 The `replica` binary is a stand alone binary, which includes every resource
 it uses, so the only tools you have to install are:

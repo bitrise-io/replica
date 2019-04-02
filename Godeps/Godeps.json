@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/bitrise-tools/replica",
+	"ImportPath": "github.com/bitrise-io/replica",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v75",
 	"Packages": [

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/bitrise-tools/replica/version"
+	"github.com/bitrise-io/replica/version"
 	"github.com/spf13/cobra"
 )
 
